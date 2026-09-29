@@ -1,4 +1,5 @@
 const { pool } = require('../config/db')
+const { responderDatosInvalidos } = require('../helpers/erroresBD')
 
 // ── GET /api/catalogos/sectores ────────────────────────────────────────────────
 const obtenerSectores = async (_req, res) => {
@@ -12,6 +13,7 @@ const obtenerSectores = async (_req, res) => {
     res.json({ registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerSectores:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener los sectores' })
   }
 }
@@ -27,6 +29,7 @@ const obtenerEspecies = async (_req, res) => {
     res.json({ registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerEspecies:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener las especies' })
   }
 }
@@ -50,6 +53,7 @@ const obtenerRazas = async (req, res) => {
     res.json({ registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerRazas:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener las razas' })
   }
 }
@@ -65,6 +69,7 @@ const obtenerColores = async (_req, res) => {
     res.json({ registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerColores:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener los colores' })
   }
 }
@@ -78,6 +83,7 @@ const obtenerCategorias = async (_req, res) => {
     res.json({ registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerCategorias:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener las categorías' })
   }
 }

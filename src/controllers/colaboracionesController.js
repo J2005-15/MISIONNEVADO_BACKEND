@@ -1,11 +1,16 @@
 const { pool } = require('../config/db')
+const { responderDatosInvalidos } = require('../helpers/erroresBD')
 const { registrarAuditoria } = require('../helpers/auditoria')
 
 // ─── OBTENER COLABORACIONES ───────────────────────────────────────────────────
 const obtenerColaboraciones = async (_req, res) => {
   try {
     const resultado = await pool.query(
-      `SELECT * FROM TT_COLAB ORDER BY COLAB_ID DESC`
+      `SELECT c.*,
+              (SELECT COALESCE(SUM(d.detco_ca * d.detco_va), 0)
+               FROM TT_DETCO d WHERE d.colab_id = c.colab_id) AS colab_total
+       FROM   TT_COLAB c
+       ORDER  BY c.COLAB_ID DESC`
     )
     res.json({
       total: resultado.rows.length,
@@ -13,6 +18,7 @@ const obtenerColaboraciones = async (_req, res) => {
     })
   } catch (error) {
     console.error('Error en obtenerColaboraciones:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener los registros de colaboraciones' })
   }
 }
@@ -62,19 +68,17 @@ const registrarColaboracion = async (req, res) => {
 
     const colabId = colabInsert.rows[0].colab_id
 
-    // 3. Insertar detalles si los hay (no bloquea si TT_DETCO tiene esquema distinto)
+    // 3. Insertar detalles si los hay. El panel los envía como DETDON_*; en la BD
+    // las columnas son DETCO_*. Un fallo aquí aborta toda la transacción (ROLLBACK):
+    // no se silencia, porque un COMMIT sobre una transacción abortada no guarda nada.
     if (Array.isArray(datos_colaboracion) && datos_colaboracion.length > 0) {
       for (const detalle of datos_colaboracion) {
         if (!detalle.DETDON_NO) continue
-        try {
-          await cliente.query(
-            `INSERT INTO TT_DETCO (COLAB_ID, DETDON_NO, DETDON_CA, DETDON_UN, DETDON_VA)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [colabId, detalle.DETDON_NO, detalle.DETDON_CA || 1, detalle.DETDON_UN || 'unidad', detalle.DETDON_VA || 0]
-          )
-        } catch (errDetalle) {
-          console.warn('Advertencia en detalle de colaboración:', errDetalle.message)
-        }
+        await cliente.query(
+          `INSERT INTO TT_DETCO (COLAB_ID, DETCO_NO, DETCO_CA, DETCO_UN, DETCO_VA)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [colabId, detalle.DETDON_NO, detalle.DETDON_CA || 1, detalle.DETDON_UN || 'unidad', detalle.DETDON_VA || 0]
+        )
       }
     }
 
@@ -96,7 +100,8 @@ const registrarColaboracion = async (req, res) => {
     // Si la inserción en TT_DETCO falla, la cabecera en TT_COLAB no existirá bajo ninguna circunstancia
     await cliente.query('ROLLBACK')
     console.error('Error en registrarColaboracion:', error.message)
-    res.status(400).json({ mensaje: error.message || 'Error al procesar la transacción' })
+    if (responderDatosInvalidos(res, error)) return
+    res.status(500).json({ mensaje: 'Error al registrar la colaboración' })
   } finally {
     cliente.release()
   }
@@ -134,8 +139,39 @@ const actualizarEstadoColab = async (req, res) => {
     res.json({ mensaje: 'Estado actualizado', registro: resultado.rows[0] })
   } catch (error) {
     console.error('Error en actualizarEstadoColab:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al actualizar el estado de la colaboración' })
   }
 }
 
-module.exports = { obtenerColaboraciones, registrarColaboracion, actualizarEstadoColab }
+// ─── ELIMINAR COLABORACIÓN — DELETE /api/colaboraciones/:id ──────────────────
+// Borra la cabecera y sus detalles en una sola transacción.
+const eliminarColaboracion = async (req, res) => {
+  const { id } = req.params
+  const cliente = await pool.connect()
+  try {
+    await cliente.query('BEGIN')
+    await cliente.query('DELETE FROM TT_DETCO WHERE COLAB_ID = $1', [id])
+    const r = await cliente.query('DELETE FROM TT_COLAB WHERE COLAB_ID = $1 RETURNING colab_co, colab_ti', [id])
+    if (r.rows.length === 0) {
+      await cliente.query('ROLLBACK')
+      return res.status(404).json({ mensaje: 'Colaboración no encontrada' })
+    }
+    await registrarAuditoria(cliente, {
+      usuari_id: req.usuario.USUARI_ID, modulo: 'COLABORACIONES',
+      accion: `Colaboración ${id} eliminada — ${r.rows[0].colab_co} (${r.rows[0].colab_ti})`, tipo: 'ALERTA', ip: req.ip,
+    })
+    await cliente.query('COMMIT')
+    res.json({ mensaje: 'Colaboración eliminada' })
+  } catch (error) {
+    await cliente.query('ROLLBACK')
+    console.error('Error en eliminarColaboracion:', error.message)
+    if (responderDatosInvalidos(res, error)) return
+    res.status(500).json({ mensaje: 'Error al eliminar la colaboración' })
+  } finally {
+    cliente.release()
+  }
+}
+
+module.exports = {
+  eliminarColaboracion, obtenerColaboraciones, registrarColaboracion, actualizarEstadoColab }

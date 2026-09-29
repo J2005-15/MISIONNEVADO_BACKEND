@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{asunto}}</title>
+</head>
+<!--
+  Plantilla ÚNICA de EmailJS — Fundación Misión Nevado
+  Sirve para todos los avisos: confirmaciones (adopción, voluntario,
+  proteccionista, denuncia) y cambios de estado. El backend arma el contenido.
+
+  Variables:
+    {{asunto}} {{etiqueta}} {{titulo}} {{{contenido}}} (HTML, triple llave)
+    {{boton_texto}} {{boton_url}} {{to_name}} {{to_email}} {{direccion}} {{telefono}}
+    {{institucion}} {{lema}}  (se editan en el panel: Configuración del Sistema)
+
+  Colores de la web: verde #2D6A4F · dorado #D4AC4E · crema #FFEFD1 · texto #212529
+-->
+<body style="margin:0; padding:0; background-color:#FFEFD1;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FFEFD1;">
+    <tr>
+      <td align="center" style="padding:32px 12px;">
+
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:600px; background-color:#ffffff; border-radius:24px; overflow:hidden; box-shadow:0 10px 30px rgba(45,106,79,0.12); font-family:Arial, Helvetica, sans-serif;">
+
+          <!-- Encabezado con logo -->
+          <tr>
+            <td align="center" style="background-color:#2D6A4F; padding:28px 24px 24px 24px;">
+              <img src="https://res.cloudinary.com/dhilpvzef/image/upload/w_320,c_limit,f_auto,q_auto/v1782364545/Logo_Nevado_glcikr.png"
+                   alt="{{institucion}}" width="140"
+                   style="display:block; width:140px; max-width:140px; height:auto; border:0; background-color:#ffffff; border-radius:16px; padding:10px;">
+              <p style="margin:16px 0 0 0; font-size:12px; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase; color:#D4AC4E;">
+                &#9679;&nbsp; {{lema}}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Etiqueta + título -->
+          <tr>
+            <td style="padding:32px 36px 4px 36px;">
+              <span style="display:inline-block; background-color:#D4AC4E; color:#212529; font-size:11px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; padding:6px 14px; border-radius:999px;">
+                {{etiqueta}}
+              </span>
+              <h1 style="margin:18px 0 14px 0; font-size:26px; line-height:1.25; font-weight:800; color:#212529;">
+                {{titulo}}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Contenido (lo arma el backend según el caso) -->
+          <tr>
+            <td style="padding:0 36px 4px 36px;">
+              {{{contenido}}}
+            </td>
+          </tr>
+
+          <!-- Botón (solo si hay enlace) -->
+          {{#boton_url}}
+          <tr>
+            <td align="center" style="padding:18px 36px 8px 36px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="background-color:#D4AC4E; border-radius:999px;">
+                    <a href="{{boton_url}}" target="_blank"
+                       style="display:inline-block; padding:14px 30px; font-size:15px; font-weight:bold; color:#212529; text-decoration:none; border-radius:999px;">
+                      &#128062;&nbsp; {{boton_texto}}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:10px 0 0 0; font-size:12px; line-height:1.5; color:#868E96;">
+                También puedes consultar tus trámites en la sección <strong>Seguimiento</strong> de nuestra web con tu correo <span style="color:#2D6A4F;">{{to_email}}</span>.
+              </p>
+            </td>
+          </tr>
+          {{/boton_url}}
+
+          <!-- Datos de contacto -->
+          <tr>
+            <td style="padding:28px 36px 32px 36px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
+                     style="background-color:#F8F9FA; border:1px solid #E9ECEF; border-radius:16px;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <p style="margin:0 0 10px 0; font-size:12px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#2D6A4F;">Sede y contacto</p>
+                    <p style="margin:0 0 6px 0; font-size:14px; line-height:1.5; color:#495057;">&#128205;&nbsp; {{direccion}}</p>
+                    <p style="margin:0; font-size:14px; line-height:1.5; color:#495057;">&#128222;&nbsp; {{telefono}}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Pie -->
+          <tr>
+            <td align="center" style="background-color:#2D6A4F; padding:20px 24px;">
+              <p style="margin:0; font-size:13px; font-weight:bold; color:#ffffff;">{{institucion}}</p>
+              <p style="margin:4px 0 0 0; font-size:12px; color:#CFE3D8;">Protegiendo la vida animal en el Municipio Jáuregui</p>
+              <p style="margin:12px 0 0 0; font-size:11px; color:#9FC5B2;">
+                ¿Tienes dudas? Responde a este correo o llámanos, con gusto te ayudamos.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

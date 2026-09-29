@@ -1,12 +1,17 @@
 const express = require('express')
-const { obtenerUsuarios, crearUsuario, actualizarEstado, actualizarRol } = require('../controllers/usuariosController')
-const { verificarToken } = require('../middlewares/authMiddleware')
+const { validarId } = require('../middlewares/validaciones')
+const { obtenerUsuarios, crearUsuario, actualizarUsuario, actualizarEstado, actualizarRol } = require('../controllers/usuariosController')
+const { verificarToken, permitirRoles, ROL } = require('../middlewares/authMiddleware')
 
 const router = express.Router()
+router.param('id', validarId)   // /recurso/abc → 400, no 500
+const soloAdmin = [verificarToken, permitirRoles(ROL.ADMINISTRADOR)]
 
-router.get('/',             verificarToken, obtenerUsuarios)
-router.post('/',            verificarToken, crearUsuario)
-router.patch('/:id/estado', verificarToken, actualizarEstado)
-router.patch('/:id/rol',    verificarToken, actualizarRol)
+// Gestión de usuarios del panel: solo el Administrador
+router.get('/',             ...soloAdmin, obtenerUsuarios)
+router.post('/',            ...soloAdmin, crearUsuario)
+router.put('/:id',          ...soloAdmin, actualizarUsuario)
+router.patch('/:id/estado', ...soloAdmin, actualizarEstado)
+router.patch('/:id/rol',    ...soloAdmin, actualizarRol)
 
 module.exports = router

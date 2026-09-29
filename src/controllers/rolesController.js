@@ -1,4 +1,5 @@
 const { pool } = require('../config/db')
+const { responderDatosInvalidos } = require('../helpers/erroresBD')
 
 // ─── OBTENER CATÁLOGO DE ROLES ────────────────────────────────────────────────
 const obtenerRoles = async (_req, res) => {
@@ -14,6 +15,7 @@ const obtenerRoles = async (_req, res) => {
     })
   } catch (error) {
     console.error('Error en obtenerRoles:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener los roles del sistema' })
   }
 }
@@ -45,6 +47,7 @@ const asignarRol = async (req, res) => {
     })
   } catch (error) {
     console.error('Error en asignarRol:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al asignar el rol al usuario' })
   }
 }

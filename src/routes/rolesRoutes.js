@@ -1,10 +1,11 @@
 const express                     = require('express')
 const { obtenerRoles, asignarRol } = require('../controllers/rolesController')
-const { verificarToken }           = require('../middlewares/authMiddleware')
+const { verificarToken, permitirRoles, ROL } = require('../middlewares/authMiddleware')
 
 const router = express.Router()
+const soloAdmin = [verificarToken, permitirRoles(ROL.ADMINISTRADOR)]
 
-router.get('/',          verificarToken, obtenerRoles)
-router.patch('/asignar', verificarToken, asignarRol)
+router.get('/',          ...soloAdmin, obtenerRoles)
+router.patch('/asignar', ...soloAdmin, asignarRol)
 
 module.exports = router

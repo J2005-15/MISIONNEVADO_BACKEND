@@ -4,6 +4,18 @@ const { verificarConexion } = require('./src/config/db')
 
 const PORT = process.env.PORT || 3000
 
+// ─── RED DE SEGURIDAD ─────────────────────────────────────────────────────────
+// Una promesa rechazada que nadie atendió se registra en el log en vez de tumbar
+// el servidor. Un error síncrono inesperado deja el proceso en estado incierto:
+// se registra y se sale para que Render lo reinicie limpio.
+process.on('unhandledRejection', (motivo) => {
+  console.error('⚠️  Promesa rechazada sin manejar:', motivo instanceof Error ? motivo.stack : motivo)
+})
+process.on('uncaughtException', (error) => {
+  console.error('❌ Error no controlado — reiniciando el servidor:', error.stack)
+  process.exit(1)
+})
+
 // ─── ARRANQUE ASÍNCRONO DEL SERVIDOR ──────────────────────────────────────────
 const iniciar = async () => {
   try {

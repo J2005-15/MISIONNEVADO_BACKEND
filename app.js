@@ -17,16 +17,42 @@ const jornadasRoutes = require('./src/routes/jornadasRoutes')
 const colaboracionesRoutes = require('./src/routes/colaboracionesRoutes')
 const usuariosRoutes = require('./src/routes/usuariosRoutes')
 const catalogosRoutes = require('./src/routes/catalogosRoutes')
+const contenidoWebRoutes = require('./src/routes/contenidoWebRoutes')
+const seguimientoRoutes = require('./src/routes/seguimientoRoutes')
+const reportesRoutes = require('./src/routes/reportesRoutes')
+
+const { limites } = require('./src/middlewares/limitador')
 
 const app = express()
 
+// Render (y Netlify) atienden detrás de un proxy: así req.ip es la IP real del
+// usuario (bitácora y límite de intentos) y no la del proxy
+app.set('trust proxy', 1)
+
 // ─── MIDDLEWARES GLOBALES ─────────────────────────────────────────────────────
+// FRONTEND_URL admite varios orígenes separados por coma (dashboard + web pública)
+const origenesPermitidos = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean)
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  origin: origenesPermitidos.length ? origenesPermitidos : '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 app.use(express.json())
+app.use(require('./src/middlewares/validaciones').cuerpoPlano)
+
+// ─── LÍMITE DE INTENTOS (antes de las rutas) ─────────────────────────────────
+app.post('/api/auth/login',       limites.login)
+app.post('/api/auth/recuperar',   limites.recuperar)
+app.post('/api/auth/restablecer', limites.restablecer)
+app.post(['/api/adopciones/solicitudes', '/api/adopciones/solicitar'], limites.formulario())
+app.post('/api/denuncias',        limites.formulario())
+app.post('/api/voluntarios',      limites.formulario())
+app.post('/api/proteccionistas',  limites.formulario())
+app.get('/api/seguimiento',       limites.seguimiento)
 
 // ─── MONTAJE DE RUTAS ─────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes)
@@ -44,6 +70,9 @@ app.use('/api/jornadas', jornadasRoutes)
 app.use('/api/colaboraciones', colaboracionesRoutes)
 app.use('/api/usuarios', usuariosRoutes)
 app.use('/api/catalogos', catalogosRoutes)
+app.use('/api/contenido-web', contenidoWebRoutes)
+app.use('/api/seguimiento', seguimientoRoutes)
+app.use('/api/reportes', reportesRoutes)
 
 // ─── RUTA DE VERIFICACIÓN ─────────────────────────────────────────────────────
 app.get('/api/estado', (_req, res) => {
@@ -63,6 +92,13 @@ app.use((req, res) => {
 
 // ─── MIDDLEWARE GLOBAL DE MANEJO DE ERRORES ───────────────────────────────────
 app.use((err, req, res, next) => {
+  // Errores del cliente (no del servidor): JSON mal formado o cuerpo demasiado grande
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ mensaje: 'La información enviada no tiene un formato válido.' })
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ mensaje: 'La información enviada es demasiado grande.' })
+  }
   console.error('Error global detectado:', err.stack)
   res.status(500).json({
     mensaje: 'Ha ocurrido un error inesperado al procesar los datos de la solicitud.',

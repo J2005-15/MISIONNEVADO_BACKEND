@@ -1,4 +1,9 @@
-const { Pool } = require('pg')
+const { Pool, types } = require('pg')
+
+// Las columnas DATE se devuelven tal cual ('2025-09-01') y no como objeto Date:
+// convertirlas a Date las desplaza por la zona horaria (quedaban un día antes)
+// y la web/panel esperan el formato YYYY-MM-DD.
+types.setTypeParser(types.builtins.DATE, (valor) => valor)
 
 // ─── SELECCIÓN DE ENTORNO ─────────────────────────────────────────────────────
 // Cambia DB_TARGET en .env: 'local' → PostgreSQL local | 'remote' → Neon

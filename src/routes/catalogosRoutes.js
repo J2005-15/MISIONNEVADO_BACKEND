@@ -4,7 +4,7 @@ const { verificarToken } = require('../middlewares/authMiddleware')
 
 const router = express.Router()
 
-router.get('/sectores',   verificarToken, obtenerSectores)
+router.get('/sectores',   obtenerSectores)   // pública: la usa el formulario de denuncias de la web
 router.get('/especies',   verificarToken, obtenerEspecies)
 router.get('/razas',      verificarToken, obtenerRazas)
 router.get('/colores',    verificarToken, obtenerColores)

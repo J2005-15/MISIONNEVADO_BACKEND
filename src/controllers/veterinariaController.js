@@ -1,4 +1,5 @@
 const { pool } = require('../config/db')
+const { responderDatosInvalidos } = require('../helpers/erroresBD')
 const { registrarAuditoria } = require('../helpers/auditoria')
 
 // ─── OBTENER TODAS LAS CONSULTAS ──────────────────────────────────────────────
@@ -36,6 +37,7 @@ const obtenerConsultas = async (_req, res) => {
     res.json({ total: resultado.rows.length, registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerConsultas:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener el historial de consultas' })
   }
 }
@@ -93,6 +95,25 @@ const registrarConsulta = async (req, res) => {
       ]
     )
 
+    // Si la consulta pertenece a una jornada, el personal que la registra queda
+    // anotado como participante (TT_JOPER) con el rol de su usuario — una sola
+    // vez por persona y jornada. Solo aplica a personal de la misión (TM_USUARIO).
+    if (JORNAD_ID) {
+      await cliente.query(
+        `INSERT INTO TT_JOPER (JORNAD_ID, PERSON_ID, JOPER_RO)
+         SELECT $1, u.person_id, r.rolreg_no
+         FROM   TM_USUARIO u
+         JOIN   TM_ROLREG  r ON r.rolreg_id = u.rolreg_id
+         WHERE  u.usuari_id = $2
+           AND  u.person_id IS NOT NULL
+           AND  NOT EXISTS (
+                  SELECT 1 FROM TT_JOPER j
+                  WHERE  j.jornad_id = $1 AND j.person_id = u.person_id
+                )`,
+        [parseInt(JORNAD_ID), USUARI_ID]
+      )
+    }
+
     await registrarAuditoria(cliente, {
       modulo: 'VETERINARIA',
       accion: `Consulta médica registrada — CENSOA_ID: ${CENSOA_ID} — Motivo: ${CONSUL_MO || '—'}`,
@@ -127,7 +148,8 @@ const registrarConsulta = async (req, res) => {
   } catch (error) {
     await cliente.query('ROLLBACK')
     console.error('Error en registrarConsulta:', error.message)
-    res.status(500).json({ mensaje: error.message || 'Error al registrar la consulta médica' })
+    if (responderDatosInvalidos(res, error)) return
+    res.status(500).json({ mensaje: 'Error al registrar la consulta médica' })
   } finally {
     cliente.release()
   }
@@ -152,6 +174,7 @@ const obtenerHistorial = async (req, res) => {
     res.json({ paciente: Number(id_censoa), total: resultado.rows.length, registros: resultado.rows })
   } catch (error) {
     console.error('Error en obtenerHistorial:', error.message)
+    if (responderDatosInvalidos(res, error)) return
     res.status(500).json({ mensaje: 'Error al obtener los registros clínicos' })
   }
 }
